@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gostratum/httpx/responsex"
 	"go.uber.org/zap"
 
 	"github.com/gostratum/examples/orderservice/internal/usecase"
@@ -31,7 +32,7 @@ type CreateUserRequest struct {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload"})
+		responsex.Error(c, http.StatusBadRequest, "INVALID_REQUEST", "invalid request payload", nil)
 		return
 	}
 
@@ -41,14 +42,14 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, user)
+	responsex.Created(c, "", user)
 }
 
 // GetUser handles GET /users/:id
 func (h *UserHandler) GetUser(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user id is required"})
+		responsex.Error(c, http.StatusBadRequest, "MISSING_PARAMETER", "user id is required", nil)
 		return
 	}
 
@@ -58,21 +59,21 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	responsex.OK(c, user, nil)
 }
 
 // handleError maps usecase errors to HTTP responses
 func (h *UserHandler) handleError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, usecase.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		responsex.Error(c, http.StatusNotFound, "USER_NOT_FOUND", "user not found", nil)
 	case errors.Is(err, usecase.ErrInvalid):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		responsex.Error(c, http.StatusBadRequest, "INVALID_INPUT", "invalid input", nil)
 	case errors.Is(err, usecase.ErrUnavailable):
 		c.Header("Retry-After", "2")
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service temporarily unavailable"})
+		responsex.Error(c, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "service temporarily unavailable", nil)
 	default:
 		h.log.Error("unexpected error", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		responsex.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error", nil)
 	}
 }

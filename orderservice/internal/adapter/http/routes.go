@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gostratum/httpx/responsex"
 	"go.uber.org/zap"
 
 	"github.com/gostratum/core"
@@ -21,6 +22,9 @@ func RegisterRoutes(
 	reg core.Registry,
 	log *zap.Logger,
 ) {
+	// Add responsex middleware for request tracking and metadata
+	e.Use(responsex.MetaMiddleware("orderservice/v1.0.0"))
+
 	// User handlers
 	userHandler := NewUserHandler(userService, log)
 	e.POST("/users", userHandler.CreateUser)

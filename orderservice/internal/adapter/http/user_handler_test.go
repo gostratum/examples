@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gostratum/httpx/responsex"
 	"go.uber.org/zap"
 
 	"github.com/gostratum/examples/orderservice/internal/domain"
@@ -140,27 +141,36 @@ func TestUserHandler_CreateUser(t *testing.T) {
 
 			// Check response body for errors
 			if tt.expectedError != "" {
-				var response map[string]string
-				json.Unmarshal(w.Body.Bytes(), &response)
-				if response["error"] != tt.expectedError {
-					t.Errorf("CreateUser() error = %v, want %v", response["error"], tt.expectedError)
+				var envelope responsex.Envelope[any]
+				json.Unmarshal(w.Body.Bytes(), &envelope)
+				if !envelope.Ok {
+					if envelope.Error == nil || envelope.Error.Message != tt.expectedError {
+						actualMsg := ""
+						if envelope.Error != nil {
+							actualMsg = envelope.Error.Message
+						}
+						t.Errorf("CreateUser() error message = %v, want %v", actualMsg, tt.expectedError)
+					}
 				}
 			}
 
 			// Check successful response
 			if tt.expectedStatus == http.StatusCreated {
-				var user domain.User
-				err := json.Unmarshal(w.Body.Bytes(), &user)
+				var envelope responsex.Envelope[domain.User]
+				err := json.Unmarshal(w.Body.Bytes(), &envelope)
 				if err != nil {
 					t.Errorf("CreateUser() failed to unmarshal response: %v", err)
 				}
-				if user.ID == "" {
+				if !envelope.Ok {
+					t.Errorf("CreateUser() envelope.Ok should be true")
+				}
+				if envelope.Data.ID == "" {
 					t.Errorf("CreateUser() user.ID should not be empty")
 				}
-				if user.Name == "" {
+				if envelope.Data.Name == "" {
 					t.Errorf("CreateUser() user.Name should not be empty")
 				}
-				if user.Email == "" {
+				if envelope.Data.Email == "" {
 					t.Errorf("CreateUser() user.Email should not be empty")
 				}
 			}
@@ -252,28 +262,37 @@ func TestUserHandler_GetUser(t *testing.T) {
 
 			// Check response body for errors
 			if tt.expectedError != "" {
-				var response map[string]string
-				json.Unmarshal(w.Body.Bytes(), &response)
-				if response["error"] != tt.expectedError {
-					t.Errorf("GetUser() error = %v, want %v", response["error"], tt.expectedError)
+				var envelope responsex.Envelope[any]
+				json.Unmarshal(w.Body.Bytes(), &envelope)
+				if !envelope.Ok {
+					if envelope.Error == nil || envelope.Error.Message != tt.expectedError {
+						actualMsg := ""
+						if envelope.Error != nil {
+							actualMsg = envelope.Error.Message
+						}
+						t.Errorf("GetUser() error message = %v, want %v", actualMsg, tt.expectedError)
+					}
 				}
 			}
 
 			// Check successful response
 			if tt.expectedStatus == http.StatusOK {
-				var user domain.User
-				err := json.Unmarshal(w.Body.Bytes(), &user)
+				var envelope responsex.Envelope[domain.User]
+				err := json.Unmarshal(w.Body.Bytes(), &envelope)
 				if err != nil {
 					t.Errorf("GetUser() failed to unmarshal response: %v", err)
 				}
-				if user.ID != tt.setupUser.ID {
-					t.Errorf("GetUser() user.ID = %v, want %v", user.ID, tt.setupUser.ID)
+				if !envelope.Ok {
+					t.Errorf("GetUser() envelope.Ok should be true")
 				}
-				if user.Name != tt.setupUser.Name {
-					t.Errorf("GetUser() user.Name = %v, want %v", user.Name, tt.setupUser.Name)
+				if envelope.Data.ID != tt.setupUser.ID {
+					t.Errorf("GetUser() user.ID = %v, want %v", envelope.Data.ID, tt.setupUser.ID)
 				}
-				if user.Email != tt.setupUser.Email {
-					t.Errorf("GetUser() user.Email = %v, want %v", user.Email, tt.setupUser.Email)
+				if envelope.Data.Name != tt.setupUser.Name {
+					t.Errorf("GetUser() user.Name = %v, want %v", envelope.Data.Name, tt.setupUser.Name)
+				}
+				if envelope.Data.Email != tt.setupUser.Email {
+					t.Errorf("GetUser() user.Email = %v, want %v", envelope.Data.Email, tt.setupUser.Email)
 				}
 			}
 		})

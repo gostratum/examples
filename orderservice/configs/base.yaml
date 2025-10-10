@@ -16,3 +16,19 @@ databases:
     slow_threshold: "200ms"
     skip_default_tx: false
     prepare_stmt: true
+# StorageX configuration for object storage
+storagex:
+  provider: "s3"
+  bucket: "orderservice-files"
+  region: "us-east-1"
+  # endpoint: "http://localhost:9000" # Uncomment for MinIO local testing
+  # use_path_style: true               # Required for MinIO
+  # disable_ssl: true                  # For local MinIO
+  request_timeout: "30s"
+  max_retries: 3
+  backoff_initial: "200ms"
+  backoff_max: "5s"
+  default_part_size: 8388608  # 8MB for multipart uploads
+  default_parallel: 4
+  enable_logging: false
+  # base_prefix: "orders/"  # Optional: prefix all keys with this path
