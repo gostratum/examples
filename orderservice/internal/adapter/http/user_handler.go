@@ -42,7 +42,9 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	responsex.Created(c, "", user)
+	// Convert domain model to HTTP DTO
+	userResponse := FromDomainUser(user)
+	responsex.Created(c, "", userResponse)
 }
 
 // GetUser handles GET /users/:id
@@ -59,7 +61,9 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	responsex.OK(c, user, nil)
+	// Convert domain model to HTTP DTO
+	userResponse := FromDomainUser(user)
+	responsex.OK(c, userResponse, nil)
 }
 
 // handleError maps usecase errors to HTTP responses

@@ -2,19 +2,19 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/gostratum/examples/orderservice/internal/domain"
-	"github.com/gostratum/examples/orderservice/internal/ports"
 )
 
 // UserService handles user business logic
 type UserService struct {
-	repo ports.UserRepository
+	repo UserRepository
 }
 
 // NewUserService creates a new user service with repository injection
-func NewUserService(repo ports.UserRepository) *UserService {
+func NewUserService(repo UserRepository) *UserService {
 	return &UserService{
 		repo: repo,
 	}
@@ -33,7 +33,8 @@ func (s *UserService) CreateUser(ctx context.Context, name, email string) (*doma
 	}
 
 	if err := s.repo.Save(ctx, user); err != nil {
-		return nil, ErrUnavailable
+		// Translate errors from repository layer
+		return nil, s.translateError(err)
 	}
 
 	return user, nil
@@ -47,8 +48,25 @@ func (s *UserService) GetUser(ctx context.Context, id string) (*domain.User, err
 
 	user, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err // Repository already maps to appropriate usecase errors
+		return nil, s.translateError(err)
 	}
 
 	return user, nil
+}
+
+// translateError converts repository/domain errors to usecase errors
+func (s *UserService) translateError(err error) error {
+	// Domain errors pass through
+	if errors.Is(err, domain.ErrNotFound) {
+		return ErrNotFound
+	}
+	if errors.Is(err, domain.ErrConflict) {
+		return ErrConflict
+	}
+	if errors.Is(err, domain.ErrInvalidInput) {
+		return ErrInvalid
+	}
+
+	// All other errors are infrastructure/availability issues
+	return ErrUnavailable
 }

@@ -16,7 +16,6 @@ import (
 
 	httpAdapter "github.com/gostratum/examples/orderservice/internal/adapter/http"
 	"github.com/gostratum/examples/orderservice/internal/adapter/repo"
-	"github.com/gostratum/examples/orderservice/internal/domain"
 	"github.com/gostratum/examples/orderservice/internal/usecase"
 )
 
@@ -162,12 +161,12 @@ func TestEndToEnd_OrderLifecycle(t *testing.T) {
 		router.ServeHTTP(w, req)
 		require.Equal(t, http.StatusCreated, w.Code)
 
-		// Create order request
-		orderReq := domain.Order{
-			UserID: "1",
-			Items: []domain.Item{
-				{SKU: "Laptop", Qty: 1, Price: 1200.00},
-				{SKU: "Mouse", Qty: 2, Price: 25.00},
+		// Create order request using the proper HTTP request format
+		orderReq := map[string]interface{}{
+			"user_id": "1",
+			"items": []map[string]interface{}{
+				{"sku": "Laptop", "qty": 1, "price": 1200.00},
+				{"sku": "Mouse", "qty": 2, "price": 25.00},
 			},
 		}
 		reqBody, _ = json.Marshal(orderReq)

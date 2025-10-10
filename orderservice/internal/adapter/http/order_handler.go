@@ -23,10 +23,26 @@ func NewOrderHandler(service *usecase.OrderService, log *zap.Logger) *OrderHandl
 	return &OrderHandler{service: service, log: log}
 }
 
+// ItemRequest represents the request payload for an order item
+type ItemRequest struct {
+	SKU   string  `json:"sku" binding:"required"`
+	Qty   int     `json:"qty" binding:"required"`
+	Price float64 `json:"price" binding:"required"`
+}
+
+// ToDomain converts ItemRequest to domain.Item
+func (r *ItemRequest) ToDomain() domain.Item {
+	return domain.Item{
+		SKU:   r.SKU,
+		Qty:   r.Qty,
+		Price: r.Price,
+	}
+}
+
 // CreateOrderRequest represents the request payload for creating an order
 type CreateOrderRequest struct {
 	UserID string        `json:"user_id" binding:"required"`
-	Items  []domain.Item `json:"items" binding:"required"`
+	Items  []ItemRequest `json:"items" binding:"required"`
 }
 
 // CreateOrder handles POST /orders
@@ -37,13 +53,21 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	order, err := h.service.CreateOrder(c.Request.Context(), req.UserID, req.Items)
+	// Convert request items to domain items
+	domainItems := make([]domain.Item, len(req.Items))
+	for i, item := range req.Items {
+		domainItems[i] = item.ToDomain()
+	}
+
+	order, err := h.service.CreateOrder(c.Request.Context(), req.UserID, domainItems)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	responsex.Created(c, "", order)
+	// Convert domain model to HTTP DTO
+	orderResponse := FromDomainOrder(order)
+	responsex.Created(c, "", orderResponse)
 }
 
 // GetOrder handles GET /orders/:id
@@ -60,7 +84,9 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 		return
 	}
 
-	responsex.OK(c, order, nil)
+	// Convert domain model to HTTP DTO
+	orderResponse := FromDomainOrder(order)
+	responsex.OK(c, orderResponse, nil)
 }
 
 // handleError maps usecase errors to HTTP responses

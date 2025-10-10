@@ -8,22 +8,24 @@ import (
 )
 
 // Item represents an item in an order
+// This is a pure domain model without infrastructure concerns
 type Item struct {
-	ID      uint    `json:"id"`
-	OrderID string  `json:"order_id"`
-	SKU     string  `json:"sku"`
-	Qty     int     `json:"qty"`
-	Price   float64 `json:"price"`
+	ID      uint
+	OrderID string
+	SKU     string
+	Qty     int
+	Price   float64
 }
 
 // Order represents an order in the system
+// This is a pure domain model without infrastructure concerns
 type Order struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	Items     []Item    `json:"items"`
-	Status    string    `json:"status"`
-	Total     float64   `json:"total"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string
+	UserID    string
+	Items     []Item
+	Status    string
+	Total     float64
+	CreatedAt time.Time
 }
 
 // NewOrder creates a new order with a generated ID
@@ -59,6 +61,7 @@ func (o *Order) AddItem(item Item) error {
 }
 
 // Validate performs basic validation on order fields
+// Item-level validation is already done in AddItem(), so this only validates order-level rules
 func (o *Order) Validate() error {
 	if o.UserID == "" {
 		return errors.New("user_id is required")
@@ -68,17 +71,8 @@ func (o *Order) Validate() error {
 		return errors.New("order must have at least one item")
 	}
 
-	for _, item := range o.Items {
-		if item.SKU == "" {
-			return errors.New("all items must have a SKU")
-		}
-		if item.Qty <= 0 {
-			return errors.New("all items must have positive quantity")
-		}
-		if item.Price < 0 {
-			return errors.New("all items must have non-negative price")
-		}
-	}
+	// Note: Individual item validation (SKU, Qty, Price) happens in AddItem()
+	// No need to re-validate here - this avoids redundant validation
 
 	return nil
 }

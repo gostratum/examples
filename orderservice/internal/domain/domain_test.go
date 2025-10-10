@@ -105,19 +105,8 @@ func TestOrderValidate(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "item with negative price",
-			order: Order{
-				ID:     "123",
-				UserID: "user123",
-				Items: []Item{
-					{SKU: "SKU1", Qty: 1, Price: -10.0},
-				},
-				Status:    "pending",
-				CreatedAt: time.Now(),
-			},
-			wantErr: true,
-		},
+		// Note: Item-level validation (negative price, empty SKU, etc.) is tested in AddItem()
+		// Validate() only checks order-level rules: UserID exists and has items
 	}
 
 	for _, tt := range tests {
@@ -125,6 +114,56 @@ func TestOrderValidate(t *testing.T) {
 			err := tt.order.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Order.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestOrderAddItem tests the AddItem method which validates individual items
+func TestOrderAddItem(t *testing.T) {
+	tests := []struct {
+		name    string
+		order   *Order
+		item    Item
+		wantErr bool
+	}{
+		{
+			name:    "valid item",
+			order:   NewOrder("user123"),
+			item:    Item{SKU: "SKU1", Qty: 1, Price: 10.0},
+			wantErr: false,
+		},
+		{
+			name:    "empty SKU",
+			order:   NewOrder("user123"),
+			item:    Item{SKU: "", Qty: 1, Price: 10.0},
+			wantErr: true,
+		},
+		{
+			name:    "zero quantity",
+			order:   NewOrder("user123"),
+			item:    Item{SKU: "SKU1", Qty: 0, Price: 10.0},
+			wantErr: true,
+		},
+		{
+			name:    "negative quantity",
+			order:   NewOrder("user123"),
+			item:    Item{SKU: "SKU1", Qty: -1, Price: 10.0},
+			wantErr: true,
+		},
+		{
+			name:    "negative price",
+			order:   NewOrder("user123"),
+			item:    Item{SKU: "SKU1", Qty: 1, Price: -10.0},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.order.AddItem(tt.item)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Order.AddItem() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

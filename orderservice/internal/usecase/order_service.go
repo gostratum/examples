@@ -2,19 +2,19 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/gostratum/examples/orderservice/internal/domain"
-	"github.com/gostratum/examples/orderservice/internal/ports"
 )
 
 // OrderService handles order business logic
 type OrderService struct {
-	repo ports.OrderRepository
+	repo OrderRepository
 }
 
 // NewOrderService creates a new order service with repository injection
-func NewOrderService(repo ports.OrderRepository) *OrderService {
+func NewOrderService(repo OrderRepository) *OrderService {
 	return &OrderService{
 		repo: repo,
 	}
@@ -38,7 +38,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID string, items []d
 	}
 
 	if err := s.repo.Save(ctx, order); err != nil {
-		return nil, ErrUnavailable
+		return nil, s.translateError(err)
 	}
 
 	return order, nil
@@ -52,8 +52,25 @@ func (s *OrderService) GetOrder(ctx context.Context, id string) (*domain.Order, 
 
 	order, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err // Repository already maps to appropriate usecase errors
+		return nil, s.translateError(err)
 	}
 
 	return order, nil
+}
+
+// translateError converts repository/domain errors to usecase errors
+func (s *OrderService) translateError(err error) error {
+	// Domain errors pass through
+	if errors.Is(err, domain.ErrNotFound) {
+		return ErrNotFound
+	}
+	if errors.Is(err, domain.ErrConflict) {
+		return ErrConflict
+	}
+	if errors.Is(err, domain.ErrInvalidInput) {
+		return ErrInvalid
+	}
+
+	// All other errors are infrastructure/availability issues
+	return ErrUnavailable
 }

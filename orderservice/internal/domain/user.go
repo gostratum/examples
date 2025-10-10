@@ -9,11 +9,12 @@ import (
 )
 
 // User represents a user in the system
+// This is a pure domain model without infrastructure concerns
 type User struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string
+	Name      string
+	Email     string
+	CreatedAt time.Time
 }
 
 // NewUser creates a new user with a generated ID

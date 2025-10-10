@@ -2,9 +2,9 @@ package repo
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gostratum/examples/orderservice/internal/domain"
-	"github.com/gostratum/examples/orderservice/internal/ports"
 	"github.com/gostratum/examples/orderservice/internal/usecase"
 	"gorm.io/gorm"
 )
@@ -15,15 +15,14 @@ type UserRepo struct {
 }
 
 // NewUserRepo creates a new GORM-based user repository
-func NewUserRepo(db *gorm.DB) ports.UserRepository {
+func NewUserRepo(db *gorm.DB) usecase.UserRepository {
 	return &UserRepo{db: db}
 }
 
 // Save stores a user in the database
 func (r *UserRepo) Save(ctx context.Context, user *domain.User) error {
-	if err := user.Validate(); err != nil {
-		return usecase.ErrInvalid
-	}
+	// Domain validation happens in use case layer, not here
+	// Adapter just handles persistence
 
 	// Convert domain model to GORM entity
 	var entity UserEntity
@@ -31,10 +30,11 @@ func (r *UserRepo) Save(ctx context.Context, user *domain.User) error {
 
 	if err := r.db.WithContext(ctx).Create(&entity).Error; err != nil {
 		// Check for unique constraint violation (duplicate email)
-		if gorm.ErrDuplicatedKey == err {
-			return usecase.ErrInvalid
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return domain.ErrConflict
 		}
-		return usecase.ErrUnavailable
+		// Return raw error - use case layer will translate to ErrUnavailable
+		return err
 	}
 
 	// Update domain model with generated values
@@ -48,10 +48,11 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (*domain.User, error
 
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&entity).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, usecase.ErrNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound
 		}
-		return nil, usecase.ErrUnavailable
+		// Return raw error - use case layer will translate to ErrUnavailable
+		return nil, err
 	}
 
 	return entity.ToDomain(), nil
