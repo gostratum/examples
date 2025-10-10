@@ -65,16 +65,17 @@ docker run --rm \
 make docker-db
 ```
 
-#### 2. Initialize Database Schema
+#### 2. Run Database Migrations
 
 ```bash
-# The schema is automatically created if using docker-compose
-# For manual setup:
-make db-init
+# Run all pending migrations
+make migrate
 
 # Or manually:
-psql -h localhost -U postgres -d orders -f init.sql
+go run cmd/migrations/main.go -action=up
 ```
+
+See [MIGRATIONS.md](MIGRATIONS.md) for detailed migration documentation.
 
 #### 3. Run the Service
 
@@ -244,16 +245,22 @@ Database connectivity errors include `Retry-After: 2` header.
 ### Available Make Targets
 
 ```bash
-make help        # Show all available targets
-make run         # Run the service locally
-make build       # Build the service binary
-make docker-db   # Start PostgreSQL in Docker
-make db-init     # Initialize database schema
-make test        # Run tests
-make fmt         # Format Go code
-make vet         # Run go vet
-make deps        # Download and tidy dependencies
+make help             # Show all available targets
+make run              # Run the service locally
+make api              # Start API service (without migrations)
+make migrate          # Run all pending database migrations
+make migrate-down     # Rollback migrations (use STEPS=n)
+make migrate-version  # Show current migration version
+make dev              # Run migrations then start API
+make build            # Build migration and API binaries
+make docker-db        # Start PostgreSQL in Docker
+make test             # Run tests
+make fmt              # Format Go code
+make vet              # Run go vet
+make deps             # Download and tidy dependencies
 ```
+
+For detailed migration commands, see [MIGRATIONS.md](MIGRATIONS.md).
 
 ### Project Structure
 
@@ -351,8 +358,8 @@ GOWORK=off make test
    # Create database manually
    createdb -h localhost -U postgres orders
    
-   # Initialize schema
-   make db-init
+   # Run migrations
+   make migrate
    ```
 
 3. **Permission issues**:

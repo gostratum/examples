@@ -1,164 +1,106 @@
 package main
 
 import (
-	"context"
 	"testing"
+	"time"
 
+	"github.com/gostratum/dbx/migrate"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
-func TestMigrationRunner(t *testing.T) {
-	t.Run("migration runner creation", func(t *testing.T) {
-		// Create in-memory SQLite database for testing
-		db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-		require.NoError(t, err)
+func TestMaskDatabaseURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		dbURL    string
+		expected string
+	}{
+		{
+			name:     "postgres URL with password",
+			dbURL:    "postgres://postgres:secret123@localhost:5432/orders?sslmode=disable",
+			expected: "postgres://postgres:***@localhost:5432/orders?sslmode=disable",
+		},
+		{
+			name:     "postgres URL without password",
+			dbURL:    "postgres://postgres@localhost:5432/orders",
+			expected: "postgres://postgres@localhost:5432/orders",
+		},
+		{
+			name:     "empty URL",
+			dbURL:    "",
+			expected: "",
+		},
+		{
+			name:     "invalid URL format",
+			dbURL:    "invalid-url",
+			expected: "invalid-url",
+		},
+	}
 
-		runner := NewMigrationRunner(db)
-		assert.NotNil(t, runner)
-		assert.Equal(t, db, runner.db)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := maskDatabaseURL(tt.dbURL)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 
-func TestRunMigrations(t *testing.T) {
-	// Create in-memory SQLite database for testing
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
+func TestConfigToOptions(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *migrate.Config
+	}{
+		{
+			name: "filesystem migrations with all options",
+			config: &migrate.Config{
+				Dir:         "./migrations",
+				Table:       "custom_migrations",
+				LockTimeout: 30 * time.Second,
+				Verbose:     true,
+				UseEmbed:    false,
+				AutoMigrate: false,
+			},
+		},
+		{
+			name: "embedded migrations",
+			config: &migrate.Config{
+				UseEmbed:    true,
+				Table:       "schema_migrations",
+				LockTimeout: 15 * time.Second,
+				Verbose:     false,
+				AutoMigrate: false,
+			},
+		},
+		{
+			name: "auto-migrate enabled",
+			config: &migrate.Config{
+				Dir:         "./migrations",
+				AutoMigrate: true,
+				Table:       "schema_migrations",
+				Verbose:     true,
+				UseEmbed:    false,
+			},
+		},
+		{
+			name: "minimal config",
+			config: &migrate.Config{
+				Dir: "./migrations",
+			},
+		},
+	}
 
-	runner := NewMigrationRunner(db)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := configToOptions(tt.config)
 
-	t.Run("status action", func(t *testing.T) {
-		// Create in-memory SQLite database for testing
-		db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-		require.NoError(t, err)
+			// We can't directly test functional options, but we can ensure
+			// the function doesn't panic and returns options when config has values
+			assert.NotNil(t, opts)
 
-		// Create tables manually for SQLite compatibility
-		err = db.Exec(`
-			CREATE TABLE users (
-				id TEXT PRIMARY KEY,
-				name TEXT NOT NULL,
-				email TEXT NOT NULL UNIQUE,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-			);
-			CREATE TABLE orders (
-				id TEXT PRIMARY KEY,
-				user_id TEXT NOT NULL,
-				status TEXT NOT NULL DEFAULT 'pending',
-				total REAL NOT NULL,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY (user_id) REFERENCES users(id)
-			);
-			CREATE TABLE items (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				order_id TEXT NOT NULL,
-				sku TEXT NOT NULL,
-				qty INTEGER NOT NULL,
-				price REAL NOT NULL,
-				FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-			);
-		`).Error
-		require.NoError(t, err)
-
-		// Test status action
-		err = checkMigrationStatus(context.Background(), db)
-		assert.NoError(t, err)
-	})
-
-	t.Run("unknown action", func(t *testing.T) {
-		// Test unknown action - should return error
-		// We can't test the actual RunMigrations function because it calls os.Exit
-		// So we'll test the logic separately
-		_ = runner // Use the runner to avoid unused variable error
-	})
-}
-
-func TestCheckMigrationStatus(t *testing.T) {
-	t.Run("check status with no tables", func(t *testing.T) {
-		// Create in-memory SQLite database for testing
-		db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-		require.NoError(t, err)
-
-		// Test with no tables
-		err = checkMigrationStatus(context.Background(), db)
-		assert.NoError(t, err)
-	})
-
-	t.Run("check status with tables", func(t *testing.T) {
-		// Create in-memory SQLite database for testing
-		db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-		require.NoError(t, err)
-
-		// Create tables manually for SQLite compatibility
-		err = db.Exec(`
-			CREATE TABLE users (
-				id TEXT PRIMARY KEY,
-				name TEXT NOT NULL,
-				email TEXT NOT NULL UNIQUE,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-			);
-			CREATE TABLE orders (
-				id TEXT PRIMARY KEY,
-				user_id TEXT NOT NULL,
-				status TEXT NOT NULL DEFAULT 'pending',
-				total REAL NOT NULL,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY (user_id) REFERENCES users(id)
-			);
-			CREATE TABLE items (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				order_id TEXT NOT NULL,
-				sku TEXT NOT NULL,
-				qty INTEGER NOT NULL,
-				price REAL NOT NULL,
-				FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-			);
-		`).Error
-		require.NoError(t, err)
-
-		// Test with tables present
-		err = checkMigrationStatus(context.Background(), db)
-		assert.NoError(t, err)
-	})
-}
-
-func TestAutoMigration(t *testing.T) {
-	t.Run("auto migrate creates tables", func(t *testing.T) {
-		// Create in-memory SQLite database for testing
-		db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-		require.NoError(t, err)
-
-		// Create tables manually for SQLite compatibility (same as repo tests)
-		err = db.Exec(`
-			CREATE TABLE users (
-				id TEXT PRIMARY KEY,
-				name TEXT NOT NULL,
-				email TEXT NOT NULL UNIQUE,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-			);
-			CREATE TABLE orders (
-				id TEXT PRIMARY KEY,
-				user_id TEXT NOT NULL,
-				status TEXT NOT NULL DEFAULT 'pending',
-				total REAL NOT NULL,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY (user_id) REFERENCES users(id)
-			);
-			CREATE TABLE items (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				order_id TEXT NOT NULL,
-				sku TEXT NOT NULL,
-				qty INTEGER NOT NULL,
-				price REAL NOT NULL,
-				FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-			);
-		`).Error
-		require.NoError(t, err)
-
-		// Verify tables were created
-		assert.True(t, db.Migrator().HasTable("users"))
-		assert.True(t, db.Migrator().HasTable("orders"))
-		assert.True(t, db.Migrator().HasTable("items"))
-	})
+			// Should have at least some options if config has values
+			if tt.config.Dir != "" || tt.config.UseEmbed || tt.config.Table != "" ||
+				tt.config.LockTimeout > 0 || tt.config.Verbose || tt.config.AutoMigrate {
+				assert.True(t, len(opts) > 0)
+			}
+		})
+	}
 }

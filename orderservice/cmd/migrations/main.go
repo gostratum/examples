@@ -5,21 +5,23 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
+	"strings"
+	"time"
 
+	"github.com/gostratum/dbx/migrate"
 	"github.com/spf13/viper"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-
-	repoAdapter "github.com/gostratum/examples/orderservice/internal/adapter/repo"
 )
 
 func main() {
 	var action string
-	flag.StringVar(&action, "action", "migrate", "Action to perform: migrate, rollback, status")
+	var steps int
+	var version uint
+	flag.StringVar(&action, "action", "up", "Action to perform: up, down, version, force, status")
+	flag.IntVar(&steps, "steps", 0, "Number of migrations to apply (0 = all)")
+	flag.UintVar(&version, "version", 0, "Version for force action")
 	flag.Parse()
 
-	fmt.Printf("🔄 Starting database %s...\n", action)
+	fmt.Printf("🔄 Starting database migration: %s...\n", action)
 
 	// Load configuration
 	v := viper.New()
@@ -29,89 +31,160 @@ func main() {
 
 	// Set environment variable defaults
 	v.SetDefault("databases.primary.driver", "postgres")
-	v.SetDefault("databases.primary.dsn", "host=localhost user=postgres password=postgres dbname=orders port=5432 sslmode=disable")
+	v.SetDefault("databases.primary.dsn", "postgres://postgres:postgres@localhost:5432/orders?sslmode=disable")
 
 	if err := v.ReadInConfig(); err != nil {
 		log.Printf("Warning: Could not read config file: %v", err)
 	}
 
-	// Connect to database directly
-	dsn := v.GetString("databases.primary.dsn")
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// Get database URL from config (already in proper format)
+	dbURL := v.GetString("databases.primary.dsn")
+	if dbURL == "" {
+		log.Fatal("Database DSN not configured")
+	}
+
+	// Create migration config from viper
+	migrationConfig, err := migrate.NewConfig(v)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to load migration config: %v", err)
 	}
 
-	fmt.Println("📦 Running auto-migrations...")
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
-	// Run auto-migration directly
-	if err := db.AutoMigrate(&repoAdapter.UserEntity{}, &repoAdapter.OrderEntity{}, &repoAdapter.ItemEntity{}); err != nil {
-		log.Fatalf("Auto-migration failed: %v", err)
-	}
-
-	fmt.Println("✅ Schema migration completed")
-
-	// Run custom migration logic based on action
-	if action != "migrate" {
-		runner := &MigrationRunner{db: db}
-		if err := RunMigrations(runner, db, action); err != nil {
-			log.Fatalf("Migration action failed: %v", err)
-		}
+	// Execute migration action
+	if err := runMigrationAction(ctx, dbURL, action, steps, version, migrationConfig); err != nil {
+		log.Fatalf("Migration failed: %v", err)
 	}
 
 	fmt.Println("✅ Migration operation completed successfully")
 }
 
-// MigrationRunner handles database migrations
-type MigrationRunner struct {
-	db *gorm.DB
-}
-
-// NewMigrationRunner creates a new migration runner
-func NewMigrationRunner(db *gorm.DB) *MigrationRunner {
-	return &MigrationRunner{db: db}
-}
-
-// RunMigrations executes database migrations based on action
-func RunMigrations(runner *MigrationRunner, db *gorm.DB, action string) error {
-	ctx := context.Background()
+// runMigrationAction executes the specified migration action using gostratum/dbx/migrate
+func runMigrationAction(ctx context.Context, dbURL, action string, steps int, version uint, cfg *migrate.Config) error {
+	// Convert config to options
+	opts := configToOptions(cfg)
 
 	switch action {
-	case "migrate":
-		fmt.Println("📦 Running auto-migrations...")
-		// Auto-migration happens automatically through dbx.WithAutoMigrate
-		fmt.Println("✅ Schema migration completed")
+	case "up":
+		fmt.Println("📦 Running migrations up...")
+		if steps > 0 {
+			if err := migrate.Steps(ctx, dbURL, steps, opts...); err != nil {
+				return fmt.Errorf("failed to migrate up %d steps: %w", steps, err)
+			}
+		} else {
+			if err := migrate.Up(ctx, dbURL, opts...); err != nil {
+				return fmt.Errorf("failed to migrate up: %w", err)
+			}
+		}
+		fmt.Println("✅ Migrations applied successfully")
 
-	case "status":
-		fmt.Println("📋 Checking migration status...")
-		if err := checkMigrationStatus(ctx, db); err != nil {
-			return fmt.Errorf("failed to check migration status: %v", err)
+	case "down":
+		fmt.Println("⚠️  Rolling back migrations...")
+		if steps > 0 {
+			if err := migrate.Steps(ctx, dbURL, -steps, opts...); err != nil {
+				return fmt.Errorf("failed to migrate down %d steps: %w", steps, err)
+			}
+		} else {
+			if err := migrate.Down(ctx, dbURL, opts...); err != nil {
+				return fmt.Errorf("failed to migrate down: %w", err)
+			}
+		}
+		fmt.Println("✅ Rollback completed")
+
+	case "version", "status":
+		status, err := migrate.GetStatus(ctx, dbURL, opts...)
+		if err != nil {
+			return fmt.Errorf("failed to get migration status: %w", err)
 		}
 
-	case "rollback":
-		fmt.Println("⚠️  Rollback not implemented - use manual SQL scripts for schema rollbacks")
-		return fmt.Errorf("rollback action requires manual intervention")
+		fmt.Printf("📋 Migration Status:\n")
+		fmt.Printf("  Database: %s\n", maskDatabaseURL(dbURL))
+		fmt.Printf("  Current Version: %d\n", status.Current)
+		fmt.Printf("  Dirty: %v\n", status.Dirty)
+		fmt.Printf("  Applied: %v\n", status.Applied)
+		fmt.Printf("  Pending: %v\n", status.Pending)
+
+	case "force":
+		if version == 0 && steps == 0 {
+			return fmt.Errorf("force action requires a version specified via -version flag or -steps flag")
+		}
+
+		forceVersion := int(version)
+		if forceVersion == 0 {
+			forceVersion = steps
+		}
+
+		fmt.Printf("⚠️  Forcing version to %d...\n", forceVersion)
+		if err := migrate.Force(ctx, dbURL, forceVersion, opts...); err != nil {
+			return fmt.Errorf("failed to force version: %w", err)
+		}
+		fmt.Println("✅ Version forced successfully")
 
 	default:
-		return fmt.Errorf("unknown action: %s. Use migrate, status, or rollback", action)
+		return fmt.Errorf("unknown action: %s. Use up, down, version, status, or force", action)
 	}
 
-	// Exit after migrations are done
-	os.Exit(0)
 	return nil
 }
 
-// checkMigrationStatus verifies that tables exist and are accessible
-func checkMigrationStatus(ctx context.Context, db *gorm.DB) error {
-	tables := []string{"users", "orders", "items"}
+// configToOptions converts migration config to functional options
+func configToOptions(cfg *migrate.Config) []migrate.Option {
+	var opts []migrate.Option
 
-	for _, table := range tables {
-		if db.WithContext(ctx).Migrator().HasTable(table) {
-			fmt.Printf("✅ Table '%s' exists\n", table)
-		} else {
-			fmt.Printf("❌ Table '%s' does not exist\n", table)
-		}
+	if cfg.Dir != "" {
+		opts = append(opts, migrate.WithDir(cfg.Dir))
 	}
 
-	return nil
+	if cfg.UseEmbed {
+		opts = append(opts, migrate.WithEmbed())
+	}
+
+	if cfg.Table != "" {
+		opts = append(opts, migrate.WithTable(cfg.Table))
+	}
+
+	if cfg.LockTimeout > 0 {
+		opts = append(opts, migrate.WithLockTimeout(cfg.LockTimeout))
+	}
+
+	if cfg.Verbose {
+		opts = append(opts, migrate.WithVerbose())
+	}
+
+	if cfg.AutoMigrate {
+		opts = append(opts, migrate.WithAutoMigrate())
+	}
+
+	return opts
+}
+
+// maskDatabaseURL masks sensitive information in database URL for logging
+func maskDatabaseURL(dbURL string) string {
+	// Simple masking - replace password with ***
+	// This is a basic implementation, could be enhanced
+	if len(dbURL) == 0 {
+		return ""
+	}
+
+	// Look for pattern like postgres://user:password@host
+	start := strings.Index(dbURL, "://")
+	if start == -1 {
+		return dbURL
+	}
+
+	at := strings.Index(dbURL[start+3:], "@")
+	if at == -1 {
+		return dbURL
+	}
+
+	colon := strings.Index(dbURL[start+3:start+3+at], ":")
+	if colon == -1 {
+		return dbURL
+	}
+
+	// Replace password with ***
+	masked := dbURL[:start+3+colon+1] + "***" + dbURL[start+3+at:]
+	return masked
 }

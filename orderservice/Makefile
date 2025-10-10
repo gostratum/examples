@@ -1,19 +1,21 @@
-.PHONY: help run build clean docker-db migrate status api dev test fmt vet
+.PHONY: help run build clean docker-db migrate migrate-down migrate-version migrate-force api dev test fmt vet
 
 # Default target
 help:
 	@echo "Available targets:"
-	@echo "  run        - Run the service locally (legacy)"
-	@echo "  api        - Start the API service (without migrations)"
-	@echo "  migrate    - Run database migrations"
-	@echo "  status     - Check migration status"
-	@echo "  dev        - Run migrations then start API (development)"
-	@echo "  build      - Build both migration and API binaries"
-	@echo "  clean      - Clean build artifacts"
-	@echo "  docker-db  - Start PostgreSQL in Docker"
-	@echo "  test       - Run tests"
-	@echo "  fmt        - Format Go code"
-	@echo "  vet        - Run go vet"
+	@echo "  run             - Run the service locally (legacy)"
+	@echo "  api             - Start the API service (without migrations)"
+	@echo "  migrate         - Run all pending database migrations"
+	@echo "  migrate-down    - Rollback migrations (use STEPS=n for specific count)"
+	@echo "  migrate-version - Show current migration version"
+	@echo "  migrate-force   - Force migration to version (use VERSION=n)"
+	@echo "  dev             - Run migrations then start API (development)"
+	@echo "  build           - Build both migration and API binaries"
+	@echo "  clean           - Clean build artifacts"
+	@echo "  docker-db       - Start PostgreSQL in Docker"
+	@echo "  test            - Run tests"
+	@echo "  fmt             - Format Go code"
+	@echo "  vet             - Run go vet"
 
 # Run the service locally
 run:
@@ -46,12 +48,34 @@ docker-db:
 # Run database migrations
 migrate:
 	@echo "🔄 Running database migrations..."
-	APP_ENV=dev CONFIG_PATHS=./configs GOWORK=off go run ./cmd/migrations -action=migrate
+	APP_ENV=dev CONFIG_PATHS=./configs GOWORK=off go run ./cmd/migrations -action=up
 
-# Check migration status  
-status:
+# Rollback migrations (use STEPS=n to specify number of migrations to rollback)
+migrate-down:
+	@echo "⚠️  Rolling back migrations..."
+ifdef STEPS
+	APP_ENV=dev CONFIG_PATHS=./configs GOWORK=off go run ./cmd/migrations -action=down -steps=$(STEPS)
+else
+	@echo "Rolling back last migration (use STEPS=n for specific count)..."
+	APP_ENV=dev CONFIG_PATHS=./configs GOWORK=off go run ./cmd/migrations -action=down -steps=1
+endif
+
+# Check current migration version
+migrate-version:
 	@echo "📋 Checking migration status..."
 	APP_ENV=dev CONFIG_PATHS=./configs GOWORK=off go run ./cmd/migrations -action=status
+
+# Force migration to specific version (use VERSION=n)
+migrate-force:
+ifndef VERSION
+	@echo "❌ Error: VERSION is required. Usage: make migrate-force VERSION=2"
+	@exit 1
+endif
+	@echo "⚠️  Forcing migration to version $(VERSION)..."
+	APP_ENV=dev CONFIG_PATHS=./configs GOWORK=off go run ./cmd/migrations -action=force -version=$(VERSION)
+
+# Check migration status (alias for migrate-version)
+status: migrate-version
 
 # Start API service (assumes migrations have been run)
 api:

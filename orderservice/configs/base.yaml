@@ -16,6 +16,12 @@ databases:
     slow_threshold: "200ms"
     skip_default_tx: false
     prepare_stmt: true
+    # Migration configuration (unified with database config)
+    auto_migrate: false                    # WARNING: Auto-run migrations on startup (dev/CI only!)
+    migration_source: "file://./migrations" # Migration source: "file://path", "embed://", or direct path
+    migration_table: "schema_migrations"   # Name of the migration tracking table
+    migration_lock_timeout: "15s"         # How long to wait for migration lock
+    migration_verbose: false              # Enable verbose migration logging
 # StorageX configuration for object storage
 storagex:
   provider: "s3"
