@@ -13,6 +13,7 @@ type UserEntity struct {
 	ID        string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Name      string    `gorm:"not null"`
 	Email     string    `gorm:"uniqueIndex;not null"`
+	AvatarURL string    `gorm:"type:text"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 }
 
@@ -35,6 +36,7 @@ func (u *UserEntity) ToDomain() *domain.User {
 		ID:        u.ID,
 		Name:      u.Name,
 		Email:     u.Email,
+		AvatarURL: u.AvatarURL,
 		CreatedAt: u.CreatedAt,
 	}
 }
@@ -44,6 +46,7 @@ func (u *UserEntity) FromDomain(user *domain.User) {
 	u.ID = user.ID
 	u.Name = user.Name
 	u.Email = user.Email
+	u.AvatarURL = user.AvatarURL
 	u.CreatedAt = user.CreatedAt
 }
 

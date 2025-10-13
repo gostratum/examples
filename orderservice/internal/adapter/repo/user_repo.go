@@ -57,3 +57,27 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (*domain.User, error
 
 	return entity.ToDomain(), nil
 }
+
+// Update modifies an existing user in the database
+func (r *UserRepo) Update(ctx context.Context, user *domain.User) error {
+	// Convert domain model to GORM entity
+	var entity UserEntity
+	entity.FromDomain(user)
+
+	result := r.db.WithContext(ctx).Where("id = ?", user.ID).Updates(&entity)
+	if result.Error != nil {
+		// Check for unique constraint violation (duplicate email)
+		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+			return domain.ErrConflict
+		}
+		// Return raw error - use case layer will translate to ErrUnavailable
+		return result.Error
+	}
+
+	// Check if the record was found and updated
+	if result.RowsAffected == 0 {
+		return domain.ErrNotFound
+	}
+
+	return nil
+}

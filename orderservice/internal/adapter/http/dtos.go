@@ -12,6 +12,7 @@ type UserResponse struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
+	AvatarURL string    `json:"avatar_url"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -24,6 +25,7 @@ func FromDomainUser(user *domain.User) *UserResponse {
 		ID:        user.ID,
 		Name:      user.Name,
 		Email:     user.Email,
+		AvatarURL: user.AvatarURL,
 		CreatedAt: user.CreatedAt,
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gostratum/httpx/responsex"
+	"github.com/gostratum/storagex/pkg/storagex"
 	"go.uber.org/zap"
 
 	"github.com/gostratum/core"
@@ -19,16 +20,21 @@ func RegisterRoutes(
 	e *gin.Engine,
 	userService *usecase.UserService,
 	orderService *usecase.OrderService,
+	storageClient storagex.Storage,
 	reg core.Registry,
 	log *zap.Logger,
 ) {
 	// Add responsex middleware for request tracking and metadata
 	e.Use(responsex.MetaMiddleware("orderservice/v1.0.0"))
 
+	// Serve static files for uploaded content
+	e.Static("/uploads", "./uploads")
+
 	// User handlers
-	userHandler := NewUserHandler(userService, log)
+	userHandler := NewUserHandler(userService, storageClient, log)
 	e.POST("/users", userHandler.CreateUser)
 	e.GET("/users/:id", userHandler.GetUser)
+	e.POST("/users/:id/avatar", userHandler.UploadAvatar)
 
 	// Order handlers
 	orderHandler := NewOrderHandler(orderService, log)

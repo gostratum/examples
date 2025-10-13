@@ -11,6 +11,7 @@ import (
 type UserRepository interface {
 	Save(ctx context.Context, u *domain.User) error
 	FindByID(ctx context.Context, id string) (*domain.User, error)
+	Update(ctx context.Context, u *domain.User) error
 }
 
 // OrderRepository defines the interface for order data operations

@@ -54,6 +54,29 @@ func (s *UserService) GetUser(ctx context.Context, id string) (*domain.User, err
 	return user, nil
 }
 
+// UpdateAvatar updates a user's avatar URL
+func (s *UserService) UpdateAvatar(ctx context.Context, userID, avatarURL string) (*domain.User, error) {
+	// Apply context deadline
+	ctx, cancel := context.WithTimeout(ctx, 800*time.Millisecond)
+	defer cancel()
+
+	// Get the existing user
+	user, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, s.translateError(err)
+	}
+
+	// Update the avatar URL
+	user.UpdateAvatar(avatarURL)
+
+	// Save the updated user
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, s.translateError(err)
+	}
+
+	return user, nil
+}
+
 // translateError converts repository/domain errors to usecase errors
 func (s *UserService) translateError(err error) error {
 	// Domain errors pass through

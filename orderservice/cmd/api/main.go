@@ -9,9 +9,7 @@ import (
 	repoAdapter "github.com/gostratum/examples/orderservice/internal/adapter/repo"
 	"github.com/gostratum/examples/orderservice/internal/usecase"
 	"github.com/gostratum/httpx"
-	// TODO: Enable once storagex AWS SDK dependencies are resolved
-	// "github.com/gostratum/storagex/pkg/storagex"
-	// _ "github.com/gostratum/storagex/internal/s3"
+	"github.com/gostratum/storagex/pkg/storagex"
 )
 
 func main() {
@@ -25,8 +23,8 @@ func main() {
 		// Include httpx module
 		httpx.Module(),
 
-		// TODO: Enable storagex module once AWS SDK dependencies are resolved
-		// storagex.Module,
+		// Include storagex module
+		storagex.Module,
 
 		// Provide dependencies
 		fx.Provide(

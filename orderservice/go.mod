@@ -8,6 +8,7 @@ require (
 	github.com/gostratum/core v0.1.0
 	github.com/gostratum/dbx v0.1.0
 	github.com/gostratum/httpx v0.1.0
+	github.com/gostratum/storagex v0.1.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/fx v1.24.0

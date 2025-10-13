@@ -14,6 +14,7 @@ type User struct {
 	ID        string
 	Name      string
 	Email     string
+	AvatarURL string
 	CreatedAt time.Time
 }
 
@@ -23,8 +24,14 @@ func NewUser(name, email string) *User {
 		ID:        uuid.New().String(),
 		Name:      name,
 		Email:     email,
+		AvatarURL: "",
 		CreatedAt: time.Now(),
 	}
+}
+
+// UpdateAvatar updates the user's avatar URL
+func (u *User) UpdateAvatar(avatarURL string) {
+	u.AvatarURL = avatarURL
 }
 
 // Validate performs basic validation on user fields

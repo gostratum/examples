@@ -22,14 +22,18 @@ databases:
     migration_table: "schema_migrations"   # Name of the migration tracking table
     migration_lock_timeout: "15s"         # How long to wait for migration lock
     migration_verbose: false              # Enable verbose migration logging
+
 # StorageX configuration for object storage
 storagex:
   provider: "s3"
-  bucket: "orderservice-files"
+  bucket: "orderservice-avatars"
   region: "us-east-1"
-  # endpoint: "http://localhost:9000" # Uncomment for MinIO local testing
-  # use_path_style: true               # Required for MinIO
-  # disable_ssl: true                  # For local MinIO
+  # For local development with MinIO (uncomment these lines and start MinIO):
+  # endpoint: "http://localhost:9000"
+  # use_path_style: true
+  # disable_ssl: true
+  # access_key: "minioadmin"
+  # secret_key: "minioadmin"
   request_timeout: "30s"
   max_retries: 3
   backoff_initial: "200ms"
@@ -37,4 +41,4 @@ storagex:
   default_part_size: 8388608  # 8MB for multipart uploads
   default_parallel: 4
   enable_logging: false
-  # base_prefix: "orders/"  # Optional: prefix all keys with this path
+  base_prefix: "avatars/"  # Optional: prefix all keys with this path
