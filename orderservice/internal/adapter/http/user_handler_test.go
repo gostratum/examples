@@ -20,9 +20,10 @@ import (
 
 // MockUserRepo implements the usecase.UserRepository interface for testing
 type MockUserRepo struct {
-	users     map[string]*domain.User
-	saveError error
-	findError error
+	users       map[string]*domain.User
+	saveError   error
+	findError   error
+	updateError error
 }
 
 func NewMockUserRepo() *MockUserRepo {
@@ -50,12 +51,27 @@ func (m *MockUserRepo) FindByID(ctx context.Context, id string) (*domain.User, e
 	return user, nil
 }
 
+func (m *MockUserRepo) Update(ctx context.Context, u *domain.User) error {
+	if m.updateError != nil {
+		return m.updateError
+	}
+	if _, exists := m.users[u.ID]; !exists {
+		return usecase.ErrNotFound
+	}
+	m.users[u.ID] = u
+	return nil
+}
+
 func (m *MockUserRepo) SetSaveError(err error) {
 	m.saveError = err
 }
 
 func (m *MockUserRepo) SetFindError(err error) {
 	m.findError = err
+}
+
+func (m *MockUserRepo) SetUpdateError(err error) {
+	m.updateError = err
 }
 
 func TestUserHandler_CreateUser(t *testing.T) {
@@ -115,7 +131,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 			}
 
 			service := usecase.NewUserService(repo)
-			handler := NewUserHandler(service, logger)
+			handler := NewUserHandler(service, nil, logger)
 
 			// Create request
 			var body bytes.Buffer
@@ -239,7 +255,7 @@ func TestUserHandler_GetUser(t *testing.T) {
 			}
 
 			service := usecase.NewUserService(repo)
-			handler := NewUserHandler(service, logger)
+			handler := NewUserHandler(service, nil, logger)
 
 			// Create request
 			req, _ := http.NewRequest(http.MethodGet, "/users/"+tt.userID, nil)

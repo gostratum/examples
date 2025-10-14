@@ -11,9 +11,10 @@ import (
 
 // MockUserRepository implements ports.UserRepository for testing
 type MockUserRepository struct {
-	users     map[string]*domain.User
-	saveError error
-	findError error
+	users       map[string]*domain.User
+	saveError   error
+	findError   error
+	updateError error
 }
 
 func NewMockUserRepository() *MockUserRepository {
@@ -41,12 +42,27 @@ func (m *MockUserRepository) FindByID(ctx context.Context, id string) (*domain.U
 	return user, nil
 }
 
+func (m *MockUserRepository) Update(ctx context.Context, u *domain.User) error {
+	if m.updateError != nil {
+		return m.updateError
+	}
+	if _, exists := m.users[u.ID]; !exists {
+		return errors.New("not found")
+	}
+	m.users[u.ID] = u
+	return nil
+}
+
 func (m *MockUserRepository) SetSaveError(err error) {
 	m.saveError = err
 }
 
 func (m *MockUserRepository) SetFindError(err error) {
 	m.findError = err
+}
+
+func (m *MockUserRepository) SetUpdateError(err error) {
+	m.updateError = err
 }
 
 func TestCreateUser(t *testing.T) {

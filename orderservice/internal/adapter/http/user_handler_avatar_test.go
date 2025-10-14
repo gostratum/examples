@@ -70,7 +70,7 @@ func TestUploadAvatarEndpoint(t *testing.T) {
 		// Perform request
 		router.ServeHTTP(w, req)
 
-		// Assert response (Gin should return 404 for empty param)
-		assert.Equal(t, http.StatusNotFound, w.Code)
+		// Assert response: handler should report missing parameter
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }

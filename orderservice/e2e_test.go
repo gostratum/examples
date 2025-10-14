@@ -33,6 +33,7 @@ func setupTestServer(t *testing.T) *gin.Engine {
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
 			email TEXT NOT NULL UNIQUE,
+			avatar_url TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE TABLE orders (
@@ -66,7 +67,7 @@ func setupTestServer(t *testing.T) *gin.Engine {
 	logger := zap.NewNop()
 
 	// Create handlers
-	userHandler := httpAdapter.NewUserHandler(userService, logger)
+	userHandler := httpAdapter.NewUserHandler(userService, nil, logger)
 	orderHandler := httpAdapter.NewOrderHandler(orderService, logger)
 
 	// Create router
