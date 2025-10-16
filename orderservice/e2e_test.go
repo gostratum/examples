@@ -10,10 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	"github.com/gostratum/core/logx"
 	httpAdapter "github.com/gostratum/examples/orderservice/internal/adapter/http"
 	"github.com/gostratum/examples/orderservice/internal/adapter/repo"
 	"github.com/gostratum/examples/orderservice/internal/usecase"
@@ -64,7 +64,7 @@ func setupTestServer(t *testing.T) *gin.Engine {
 	orderService := usecase.NewOrderService(orderRepo)
 
 	// Create logger
-	logger := zap.NewNop()
+	logger := logx.NewNoopLogger()
 
 	// Create handlers
 	userHandler := httpAdapter.NewUserHandler(userService, nil, logger)

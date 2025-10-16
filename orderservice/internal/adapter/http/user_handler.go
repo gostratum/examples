@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gostratum/core/logx"
 	"github.com/gostratum/httpx/responsex"
 	"github.com/gostratum/storagex/pkg/storagex"
-	"go.uber.org/zap"
 
 	"github.com/gostratum/examples/orderservice/internal/usecase"
 )
@@ -21,11 +21,11 @@ import (
 type UserHandler struct {
 	service       *usecase.UserService
 	storageClient storagex.Storage
-	log           *zap.Logger
+	log           logx.Logger
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(service *usecase.UserService, storageClient storagex.Storage, log *zap.Logger) *UserHandler {
+func NewUserHandler(service *usecase.UserService, storageClient storagex.Storage, log logx.Logger) *UserHandler {
 	return &UserHandler{
 		service:       service,
 		storageClient: storageClient,
@@ -115,7 +115,7 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 		Overwrite:   true,
 	})
 	if err != nil {
-		h.log.Error("failed to upload avatar", zap.Error(err))
+		h.log.Error("failed to upload avatar", logx.Err(err))
 		responsex.Error(c, http.StatusInternalServerError, "UPLOAD_FAILED", "failed to upload avatar", nil)
 		return
 	}
@@ -164,7 +164,7 @@ func (h *UserHandler) handleError(c *gin.Context, err error) {
 		c.Header("Retry-After", "2")
 		responsex.Error(c, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "service temporarily unavailable", nil)
 	default:
-		h.log.Error("unexpected error", zap.Error(err))
+		h.log.Error("unexpected error", logx.Err(err))
 		responsex.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error", nil)
 	}
 }

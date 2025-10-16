@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gostratum/core/logx"
 	"github.com/gostratum/httpx/responsex"
 	"github.com/gostratum/storagex/pkg/storagex"
-	"go.uber.org/zap"
 
 	"github.com/gostratum/core"
 	"github.com/gostratum/examples/orderservice/internal/usecase"
@@ -22,7 +22,7 @@ func RegisterRoutes(
 	orderService *usecase.OrderService,
 	storageClient storagex.Storage,
 	reg core.Registry,
-	log *zap.Logger,
+	log logx.Logger,
 ) {
 	// Add responsex middleware for request tracking and metadata
 	e.Use(responsex.MetaMiddleware("orderservice/v1.0.0"))

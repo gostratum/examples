@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gostratum/core/logx"
 	"github.com/gostratum/httpx/responsex"
-	"go.uber.org/zap"
 
 	"github.com/gostratum/examples/orderservice/internal/domain"
 	"github.com/gostratum/examples/orderservice/internal/usecase"
@@ -121,7 +121,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 		},
 	}
 
-	logger := zap.NewNop()
+	logger := logx.NewNoopLogger()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -240,7 +240,7 @@ func TestUserHandler_GetUser(t *testing.T) {
 		},
 	}
 
-	logger := zap.NewNop()
+	logger := logx.NewNoopLogger()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

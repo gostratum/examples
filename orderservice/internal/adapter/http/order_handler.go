@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gostratum/core/logx"
 	"github.com/gostratum/httpx/responsex"
-	"go.uber.org/zap"
 
 	"github.com/gostratum/examples/orderservice/internal/domain"
 	"github.com/gostratum/examples/orderservice/internal/usecase"
@@ -15,11 +15,11 @@ import (
 // OrderHandler handles order-related HTTP requests
 type OrderHandler struct {
 	service *usecase.OrderService
-	log     *zap.Logger
+	log     logx.Logger
 }
 
 // NewOrderHandler creates a new order handler
-func NewOrderHandler(service *usecase.OrderService, log *zap.Logger) *OrderHandler {
+func NewOrderHandler(service *usecase.OrderService, log logx.Logger) *OrderHandler {
 	return &OrderHandler{service: service, log: log}
 }
 
@@ -100,7 +100,7 @@ func (h *OrderHandler) handleError(c *gin.Context, err error) {
 		c.Header("Retry-After", "2")
 		responsex.Error(c, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "service temporarily unavailable", nil)
 	default:
-		h.log.Error("unexpected error", zap.Error(err))
+		h.log.Error("unexpected error", logx.Err(err))
 		responsex.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error", nil)
 	}
 }

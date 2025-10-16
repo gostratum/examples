@@ -1,0 +1,39 @@
+app:
+  name: observability-demo
+  env: development
+  debug: true
+
+log:
+  level: info
+  encoding: console
+  development: true
+
+http:
+  host: 0.0.0.0
+  port: 8080
+  shutdown_timeout: 30s
+
+database:
+  default:
+    driver: sqlite
+    dsn: file:demo.db?cache=shared&mode=memory
+    max_open_conns: 10
+    max_idle_conns: 5
+    conn_max_lifetime: 1h
+    conn_max_idle_time: 10m
+
+metrics:
+  enabled: true
+  provider: prometheus
+  prometheus:
+    port: 9090
+    path: /metrics
+
+tracing:
+  enabled: true
+  provider: otlp
+  otlp:
+    endpoint: localhost:4317
+    insecure: true
+  service_name: observability-demo
+  sample_rate: 1.0
