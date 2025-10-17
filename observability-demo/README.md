@@ -1,9 +1,32 @@
 # Observability Demo
 
-A comprehensive example demonstrating the full observability stack in gostratum:
+A comprehensive example demonstrating the full observability stack in gostratum with **modern configuration patterns**:
 - **Metrics** - Prometheus metrics for HTTP requests and database queries
 - **Tracing** - OpenTelemetry distributed tracing
-- **Resilience** - Circuit breakers, retry, rate limiting (available via resiliencex)
+- **Logging** - Structured logging with core/logx
+- **Health Checks** - Database health monitoring with core.Registry
+- **Configuration** - Using core/configx for unified configuration
+
+## What's New in This Example
+
+This example demonstrates the **updated gostratum patterns**:
+
+### ✨ Modern Configuration (`core/configx`)
+- Uses `core/configx.Loader` for configuration loading
+- Database configuration follows the new `db.*` format
+- Configuration prefix support via `Configurable` interface
+- Environment variables with `STRATUM_` prefix
+
+### ✨ Health Check Integration (`core.Registry`)
+- Database health checks using `core.Registry`
+- Both liveness and readiness probes
+- Automatic health endpoint registration
+- Kubernetes-ready health monitoring
+
+### ✨ Dependency Injection Best Practices
+- Uses `*gorm.DB` directly (not `Connections` map)
+- Cleaner service constructors
+- Better testability through proper DI
 
 ## Features
 
@@ -131,7 +154,36 @@ Then open http://localhost:16686 to view traces in Jaeger UI.
 
 ## Configuration
 
-Edit `config.yaml` to customize:
+This example uses the **new core/configx configuration pattern**:
+
+### Database Configuration (New Format)
+```yaml
+db:
+  default: primary       # Default database name
+  databases:
+    primary:
+      driver: sqlite
+      dsn: file:demo.db?cache=shared&mode=memory
+      max_open_conns: 10
+      max_idle_conns: 5
+      conn_max_lifetime: 1h
+      conn_max_idle_time: 10m
+      log_level: info          # GORM log level
+      slow_threshold: 200ms    # Slow query threshold
+```
+
+**Key Changes:**
+- New structure: `db.databases.<name>` instead of `database.default`
+- Added `log_level` and `slow_threshold` for better GORM configuration
+- Implements `configx.Configurable` interface with prefix `"db"`
+
+### Environment Variables
+Override any config with environment variables using `STRATUM_` prefix:
+```bash
+export STRATUM_DB_DEFAULT=primary
+export STRATUM_DB_DATABASES_PRIMARY_DSN="postgres://localhost/mydb"
+export STRATUM_DB_DATABASES_PRIMARY_MAX_OPEN_CONNS=50
+```
 
 ### Metrics
 ```yaml
@@ -155,14 +207,67 @@ tracing:
   sample_rate: 1.0      # Sample 100% of traces
 ```
 
-### Database
-```yaml
-database:
-  default:
-    driver: sqlite
-    dsn: file:demo.db?cache=shared&mode=memory
-    max_open_conns: 10
-    max_idle_conns: 5
+### Health Checks
+The database module automatically registers health checks:
+```bash
+# Readiness check - Is the app ready to serve traffic?
+curl http://localhost:8080/health/ready
+
+# Liveness check - Is the app alive?
+curl http://localhost:8080/health/live
+```
+
+**Example Response:**
+```json
+{
+  "ok": true,
+  "details": {
+    "db-primary-readiness": {"ok": true, "error": ""},
+    "db-primary-liveness": {"ok": true, "error": ""}
+  }
+}
+```
+
+## Code Patterns Demonstrated
+
+### 1. Dependency Injection with *gorm.DB
+```go
+// ✅ New pattern - inject *gorm.DB directly
+func NewUserService(db *gorm.DB, logger logx.Logger) (*UserService, error) {
+    return &UserService{db: db, logger: logger}, nil
+}
+
+// ❌ Old pattern - inject Connections map
+func NewUserService(conns dbx.Connections, logger logx.Logger) (*UserService, error) {
+    conn, exists := conns["default"]
+    if !exists {
+        return nil, fmt.Errorf("default database connection not found")
+    }
+    return &UserService{db: conn, logger: logger}, nil
+}
+```
+
+### 2. Health Check Integration
+Health checks are automatically registered by the `dbx.Module()`:
+```go
+// Automatic registration - no manual code needed
+app := fx.New(
+    httpx.Module(),    // Provides HTTP server + health endpoints
+    dbx.Module(),      // Automatically registers DB health checks
+    // ...
+)
+```
+
+### 3. Configuration Loading
+Configuration is automatically loaded using `core/configx`:
+```go
+// In your config.yaml - uses new format
+db:
+  default: primary
+  databases:
+    primary:
+      driver: sqlite
+      # ... other settings
 ```
 
 ## Observability Features

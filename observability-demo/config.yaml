@@ -13,14 +13,19 @@ http:
   port: 8080
   shutdown_timeout: 30s
 
-database:
-  default:
-    driver: sqlite
-    dsn: file:demo.db?cache=shared&mode=memory
-    max_open_conns: 10
-    max_idle_conns: 5
-    conn_max_lifetime: 1h
-    conn_max_idle_time: 10m
+# Database configuration using new dbx format (core/configx pattern)
+db:
+  default: primary
+  databases:
+    primary:
+      driver: sqlite
+      dsn: file:demo.db?cache=shared&mode=memory
+      max_open_conns: 10
+      max_idle_conns: 5
+      conn_max_lifetime: 1h
+      conn_max_idle_time: 10m
+      log_level: info
+      slow_threshold: 200ms
 
 metrics:
   enabled: true

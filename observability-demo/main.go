@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -57,12 +56,8 @@ type UserService struct {
 	logger logx.Logger
 }
 
-func NewUserService(conns dbx.Connections, logger logx.Logger) (*UserService, error) {
-	conn, exists := conns["default"]
-	if !exists {
-		return nil, fmt.Errorf("default database connection not found")
-	}
-	return &UserService{db: conn, logger: logger}, nil
+func NewUserService(db *gorm.DB, logger logx.Logger) (*UserService, error) {
+	return &UserService{db: db, logger: logger}, nil
 }
 
 func (s *UserService) CreateUser(ctx context.Context, name, email string) (*User, error) {
@@ -246,16 +241,11 @@ func RegisterRoutes(engine *gin.Engine, handler *UserHandler) {
 }
 
 // SetupDatabase initializes the database schema
-func SetupDatabase(lc fx.Lifecycle, conns dbx.Connections, logger logx.Logger) {
+func SetupDatabase(lc fx.Lifecycle, db *gorm.DB, logger logx.Logger) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			conn, exists := conns["default"]
-			if !exists {
-				return fmt.Errorf("default database connection not found")
-			}
-
 			// Auto-migrate the User model
-			if err := conn.AutoMigrate(&User{}); err != nil {
+			if err := db.AutoMigrate(&User{}); err != nil {
 				logger.Error("failed to migrate database", logx.Err(err))
 				return err
 			}
