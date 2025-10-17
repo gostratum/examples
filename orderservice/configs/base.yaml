@@ -4,24 +4,27 @@ app:
 http:
   addr: ":8080"
 
-databases:
-  primary:
-    driver: "postgres"
-    dsn: "postgres://postgres:postgres@localhost:5432/orders?sslmode=disable"
-    max_open_conns: 25
-    max_idle_conns: 5
-    conn_max_lifetime: "5m"
-    conn_max_idle_time: "5m"
-    log_level: "warn"
-    slow_threshold: "200ms"
-    skip_default_tx: false
-    prepare_stmt: true
-    # Migration configuration (unified with database config)
-    auto_migrate: false                    # WARNING: Auto-run migrations on startup (dev/CI only!)
-    migration_source: "file://./migrations" # Migration source: "file://path", "embed://", or direct path
-    migration_table: "schema_migrations"   # Name of the migration tracking table
-    migration_lock_timeout: "15s"         # How long to wait for migration lock
-    migration_verbose: false              # Enable verbose migration logging
+# Database configuration (updated to use new dbx format with core/configx)
+db:
+  default: primary
+  databases:
+    primary:
+      driver: "postgres"
+      dsn: "postgres://postgres:postgres@localhost:5432/orders?sslmode=disable"
+      max_open_conns: 25
+      max_idle_conns: 5
+      conn_max_lifetime: "5m"
+      conn_max_idle_time: "5m"
+      log_level: "warn"
+      slow_threshold: "200ms"
+      skip_default_tx: false
+      prepare_stmt: true
+      # Migration configuration (unified with database config)
+      auto_migrate: false                    # WARNING: Auto-run migrations on startup (dev/CI only!)
+      migration_source: "file://./migrations" # Migration source: "file://path", "embed://", or direct path
+      migration_table: "schema_migrations"   # Name of the migration tracking table
+      migration_lock_timeout: "15s"         # How long to wait for migration lock
+      migration_verbose: false              # Enable verbose migration logging
 
 # StorageX configuration for object storage
 storagex:
