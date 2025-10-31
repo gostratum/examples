@@ -1,5 +1,5 @@
 # Avatar Upload Feature Impleme## Storage Implementation
-- **Real StorageX**: Now using the actual `github.com/gostratum/storagex/pkg/storagex` package:
+- **Real StorageX**: Now using the actual `github.com/gostratum/storagex` package:
   - `Storage` interface for cloud storage operations
   - S3-compatible storage backend (AWS S3, MinIO)
   - Built-in dependency injection module for fx framework
@@ -106,7 +106,7 @@ Successfully integrated with the real `github.com/gostratum/storagex v0.1.0` pac
 
 1. ✅ Added real storagex dependency to go.mod
 2. ✅ Removed mock implementation 
-3. ✅ Updated imports to use `github.com/gostratum/storagex/pkg/storagex`
+3. ✅ Updated imports to use `github.com/gostratum/storagex`
 4. ✅ Updated handler to use `Storage` interface and `Put` method
 5. ✅ Updated configuration for S3/MinIO compatibility
 6. ✅ All code compiles and builds successfully

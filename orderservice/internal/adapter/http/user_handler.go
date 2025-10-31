@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gostratum/core/logx"
 	"github.com/gostratum/httpx/responsex"
-	"github.com/gostratum/storagex/pkg/storagex"
+	"github.com/gostratum/storagex"
 
 	"github.com/gostratum/examples/orderservice/internal/usecase"
 )

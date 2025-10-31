@@ -1,29 +1,35 @@
+//go:build monolith
+// +build monolith
+
 package main
 
 import (
-	"go.uber.org/fx"
-
 	"github.com/gostratum/core"
 	"github.com/gostratum/dbx"
+	"github.com/gostratum/httpx"
+	"github.com/gostratum/storagex"
+	"go.uber.org/fx"
+
 	httpAdapter "github.com/gostratum/examples/orderservice/internal/adapter/http"
 	repoAdapter "github.com/gostratum/examples/orderservice/internal/adapter/repo"
 	"github.com/gostratum/examples/orderservice/internal/usecase"
-	"github.com/gostratum/httpx"
-	"github.com/gostratum/storagex"
-	s3Adapter "github.com/gostratum/storagex/adapters/s3"
 )
 
+// Monolithic main selected with build tag `monolith`.
+// Run: `go run -tags=monolith .` from the cmd/api directory
 func main() {
 	app := core.New(
 		// Include dbx module without auto-migration (run migrations separately)
-		dbx.Module(),
+		dbx.Module(
+			dbx.WithDefault("primary"),
+			dbx.WithHealthChecks(),
+		),
 
 		// Include httpx module
 		httpx.Module(),
 
-		// Include storagex module with S3 adapter
-		storagex.Module(),
-		s3Adapter.Module(),
+		// Include storagex module (fx.Option variable)
+		storagex.Module,
 
 		// Provide dependencies
 		fx.Provide(

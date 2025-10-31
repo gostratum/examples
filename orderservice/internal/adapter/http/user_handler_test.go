@@ -79,7 +79,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		requestBody    interface{}
+		requestBody    any
 		setupRepoError error
 		expectedStatus int
 		expectedError  string

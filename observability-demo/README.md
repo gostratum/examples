@@ -88,6 +88,23 @@ go mod tidy
 go run .
 ```
 
+### Examples: modular vs monolithic
+
+This example supports two composition styles in the same codebase:
+
+- Modular (default): the `main.go` demonstrates composing the app via separate modules (preferred for multi-module workspaces).
+- Monolithic: an alternate `main` is provided and enabled via the `monolith` build tag.
+
+Run the default (modular) example:
+```bash
+go run .
+```
+
+Run the monolithic variant:
+```bash
+go run -tags=monolith .
+```
+
 ### 2. Test the API
 
 Create a user:

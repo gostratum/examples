@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gostratum/core"
 	"github.com/gostratum/core/logx"
 	"github.com/gostratum/dbx"
 	"github.com/gostratum/httpx"
@@ -15,15 +16,12 @@ import (
 )
 
 func main() {
-	app := fx.New(
-		// Core modules
-		logx.Module(),
-
-		// Observability modules
+	app := core.New(
+		// Observability modules (opt-in)
 		metricsx.Module(),
 		tracingx.Module(),
 
-		// Service modules with observability
+		// Infrastructure modules with automatic observability
 		httpx.Module(),
 		dbx.Module(),
 

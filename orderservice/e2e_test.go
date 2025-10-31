@@ -98,7 +98,7 @@ func TestEndToEnd_UserLifecycle(t *testing.T) {
 
 	t.Run("create and retrieve user", func(t *testing.T) {
 		// Create user request
-		userReq := map[string]interface{}{
+		userReq := map[string]any{
 			"name":  "John Doe",
 			"email": "john.doe@example.com",
 		}
@@ -112,13 +112,13 @@ func TestEndToEnd_UserLifecycle(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		var createEnvelope map[string]interface{}
+		var createEnvelope map[string]any
 		err := json.Unmarshal(w.Body.Bytes(), &createEnvelope)
 		require.NoError(t, err)
 
 		// Extract data from envelope
 		assert.True(t, createEnvelope["ok"].(bool))
-		createResp := createEnvelope["data"].(map[string]interface{})
+		createResp := createEnvelope["data"].(map[string]any)
 
 		userID := createResp["id"].(string)
 		assert.Equal(t, "John Doe", createResp["name"])
@@ -131,13 +131,13 @@ func TestEndToEnd_UserLifecycle(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var getEnvelope map[string]interface{}
+		var getEnvelope map[string]any
 		err = json.Unmarshal(w.Body.Bytes(), &getEnvelope)
 		require.NoError(t, err)
 
 		// Extract data from envelope
 		assert.True(t, getEnvelope["ok"].(bool))
-		getResp := getEnvelope["data"].(map[string]interface{})
+		getResp := getEnvelope["data"].(map[string]any)
 
 		assert.Equal(t, userID, getResp["id"])
 		assert.Equal(t, "John Doe", getResp["name"])
@@ -150,7 +150,7 @@ func TestEndToEnd_OrderLifecycle(t *testing.T) {
 
 	t.Run("create and retrieve order", func(t *testing.T) {
 		// First create a user
-		userReq := map[string]interface{}{
+		userReq := map[string]any{
 			"name":  "Jane Smith",
 			"email": "jane.smith@example.com",
 		}
@@ -163,9 +163,9 @@ func TestEndToEnd_OrderLifecycle(t *testing.T) {
 		require.Equal(t, http.StatusCreated, w.Code)
 
 		// Create order request using the proper HTTP request format
-		orderReq := map[string]interface{}{
+		orderReq := map[string]any{
 			"user_id": "1",
-			"items": []map[string]interface{}{
+			"items": []map[string]any{
 				{"sku": "Laptop", "qty": 1, "price": 1200.00},
 				{"sku": "Mouse", "qty": 2, "price": 25.00},
 			},
@@ -180,13 +180,13 @@ func TestEndToEnd_OrderLifecycle(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		var createEnvelope map[string]interface{}
+		var createEnvelope map[string]any
 		err := json.Unmarshal(w.Body.Bytes(), &createEnvelope)
 		require.NoError(t, err)
 
 		// Extract data from envelope
 		assert.True(t, createEnvelope["ok"].(bool))
-		createResp := createEnvelope["data"].(map[string]interface{})
+		createResp := createEnvelope["data"].(map[string]any)
 
 		orderID := createResp["id"].(string)
 		assert.Equal(t, "1", createResp["user_id"])
@@ -199,13 +199,13 @@ func TestEndToEnd_OrderLifecycle(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var getEnvelope map[string]interface{}
+		var getEnvelope map[string]any
 		err = json.Unmarshal(w.Body.Bytes(), &getEnvelope)
 		require.NoError(t, err)
 
 		// Extract data from envelope
 		assert.True(t, getEnvelope["ok"].(bool))
-		getResp := getEnvelope["data"].(map[string]interface{})
+		getResp := getEnvelope["data"].(map[string]any)
 
 		assert.Equal(t, orderID, getResp["id"])
 		assert.Equal(t, "1", getResp["user_id"])
@@ -218,7 +218,7 @@ func TestEndToEnd_ErrorHandling(t *testing.T) {
 
 	t.Run("create user with invalid data", func(t *testing.T) {
 		// Invalid email
-		userReq := map[string]interface{}{
+		userReq := map[string]any{
 			"name":  "John Doe",
 			"email": "invalid-email",
 		}

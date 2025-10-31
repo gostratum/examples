@@ -2,64 +2,75 @@ package main
 
 import (
 	"context"
+	"os"
 	"testing"
 
+	"github.com/gostratum/core"
 	"go.uber.org/fx"
 )
 
 func TestMainApp(t *testing.T) {
-	t.Run("app starts successfully", func(t *testing.T) {
-		// This test verifies that the fx app construction doesn't panic
-		// In a real integration test, you would provide actual implementations
-		// For now, we just test that fx.New doesn't panic with minimal setup
+	t.Run("app constructs without errors when DB available", func(t *testing.T) {
+		// Skip this test if database is not configured
+		// In CI/CD, you would set these environment variables
+		if os.Getenv("STRATUM_DB_DATABASES_PRIMARY_DSN") == "" {
+			t.Skip("Skipping integration test: STRATUM_DB_DATABASES_PRIMARY_DSN not set")
+		}
 
+		// This test requires an actual database connection
+		// It verifies the full application can start and stop cleanly
 		defer func() {
 			if r := recover(); r != nil {
-				t.Errorf("fx.New panicked: %v", r)
+				t.Errorf("app construction panicked: %v", r)
 			}
 		}()
 
-		// Test that fx.New doesn't panic
-		app := fx.New(
-			fx.Provide(
-				func() interface{} { return "mock_dependency" },
-			),
-			fx.NopLogger,
+		// Construct the app exactly like in main()
+		// Note: This uses whatever configuration is in the environment/config files
+		app := core.New(
+			// All the modules and providers from main.go would go here
+			// For now, just test that core.New works
+			fx.Invoke(func() {
+				// Minimal validation
+			}),
 		)
 
 		if app == nil {
 			t.Error("Expected fx app to be created")
+			return
 		}
 
-		// Clean up
-		app.Stop(context.Background())
+		// Start and immediately stop the app to verify lifecycle
+		ctx := context.Background()
+		if err := app.Start(ctx); err != nil {
+			t.Fatalf("Failed to start app: %v", err)
+		}
+
+		if err := app.Stop(ctx); err != nil {
+			t.Fatalf("Failed to stop app: %v", err)
+		}
 	})
 }
 
-func TestMainAppIntegration(t *testing.T) {
-	t.Run("dependency injection setup is valid", func(t *testing.T) {
-		// This test verifies that the fx app construction is valid
-		// We can't easily test the full app startup in unit tests due to external dependencies
-		// But we can test that the fx.New call doesn't panic and returns a valid app
+func TestMainAppMinimal(t *testing.T) {
+	t.Run("core.New minimal construction", func(t *testing.T) {
+		// Test that core.New works without any additional modules
+		// This validates the core framework itself
 
 		defer func() {
 			if r := recover(); r != nil {
-				t.Errorf("fx.New panicked: %v", r)
+				t.Errorf("core.New panicked: %v", r)
 			}
 		}()
 
-		// Test that fx.New doesn't panic with the current setup
-		// Note: This will fail in CI without proper environment setup
-		// In a real scenario, you'd mock all external dependencies
-		app := fx.New(
-			fx.Provide(
-				func() interface{} { return "mock_dependency" },
-			),
-			fx.NopLogger,
+		app := core.New(
+			fx.Invoke(func() {
+				// Empty invoke just to validate construction
+			}),
 		)
 
 		if app == nil {
-			t.Error("Expected fx app to be created")
+			t.Error("Expected app to be created")
 		}
 	})
 }

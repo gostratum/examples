@@ -247,7 +247,7 @@ if (envelope.ok) {
 2. **Workaround**: Comment out storagex imports in `cmd/api/main.go` to compile without storage support:
    ```go
    // Comment these lines temporarily:
-   // "github.com/gostratum/storagex/pkg/storagex"
+   // "github.com/gostratum/storagex"
    // _ "github.com/gostratum/storagex/internal/s3"
    // And remove storagex.Module from core.New()
    ```
