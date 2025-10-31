@@ -5,11 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/gostratum/core/configx"
 	"github.com/gostratum/dbx/migrate"
-	"github.com/spf13/viper"
 )
 
 func main() {
@@ -23,28 +24,27 @@ func main() {
 
 	fmt.Printf("🔄 Starting database migration: %s...\n", action)
 
-	// Load configuration
-	v := viper.New()
-	v.SetConfigName("base")
-	v.SetConfigType("yaml")
-	v.AddConfigPath("./configs")
+	// Load configuration using configx
+	loader := configx.New(
+		configx.WithConfigPaths("./configs"),
+	)
 
-	// Set environment variable defaults
-	v.SetDefault("databases.primary.driver", "postgres")
-	v.SetDefault("databases.primary.dsn", "postgres://postgres:postgres@localhost:5432/orders?sslmode=disable")
-
-	if err := v.ReadInConfig(); err != nil {
-		log.Printf("Warning: Could not read config file: %v", err)
+	// Bind environment variables for DSN
+	if err := loader.BindEnv("databases.primary.dsn", "STRATUM_DATABASES_PRIMARY_DSN", "DATABASE_URL"); err != nil {
+		log.Printf("Warning: Could not bind DSN env var: %v", err)
 	}
 
-	// Get database URL from config (already in proper format)
-	dbURL := v.GetString("databases.primary.dsn")
+	// For DSN, we'll use a simple environment variable approach since we only need one value
+	// and configx.Loader.Bind requires Prefix() implementation
+	dbURL := lookupEnv("DATABASE_URL", "STRATUM_DATABASES_PRIMARY_DSN")
 	if dbURL == "" {
-		log.Fatal("Database DSN not configured")
+		// Fallback to default for local development
+		dbURL = "postgres://postgres:postgres@localhost:5432/orders?sslmode=disable"
+		log.Printf("Using default DSN (set DATABASE_URL or STRATUM_DATABASES_PRIMARY_DSN to override)")
 	}
 
-	// Create migration config from viper
-	migrationConfig, err := migrate.NewConfig(v)
+	// Create migration config using configx.Loader
+	migrationConfig, err := migrate.NewConfig(loader)
 	if err != nil {
 		log.Fatalf("Failed to load migration config: %v", err)
 	}
@@ -158,6 +158,16 @@ func configToOptions(cfg *migrate.Config) []migrate.Option {
 	}
 
 	return opts
+}
+
+// lookupEnv checks multiple environment variable names and returns the first non-empty value
+func lookupEnv(names ...string) string {
+	for _, name := range names {
+		if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 // maskDatabaseURL masks sensitive information in database URL for logging
